@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#c2410c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Andra's helper">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Andra's helper</title>
+<style>
+  :root{
+    --card:#fffbf5; --ink:#431407; --muted:#9a6b4f;
+    --primary:#c2410c; --primary-2:#ea580c; --accent:#f59e0b;
+    --border:#fed7aa; --danger:#b91c1c;
+  }
+  *{box-sizing:border-box}
+  .hidden{display:none !important}
+  body{
+    margin:0; min-height:100vh; min-height:100dvh;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:var(--ink);
+    background:linear-gradient(160deg,#fff7ed 0%,#ffedd5 100%);
+  }
+  header{
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    color:#fff;
+    padding:18px 20px;
+    padding-top:calc(18px + env(safe-area-inset-top));
+    box-shadow:0 4px 14px rgba(194,65,12,.25);
+  }
+  header h1{margin:0;font-size:1.6rem}
+  header p{margin:4px 0 0;opacity:.92;font-size:.9rem}
+
+  .wrap{max-width:1000px;margin:20px auto;padding:0 16px 40px}
+
+  /* ===== Dashboard ===== */
+  .dash-title{margin:4px 0 14px;font-size:1.15rem;color:var(--primary)}
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:16px;
+  }
+  .task-btn{
+    position:relative;
+    display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+    min-height:150px;padding:18px;
+    background:var(--card);color:var(--ink);
+    border:1px solid var(--border);border-radius:18px;
+    box-shadow:0 8px 24px rgba(194,65,12,.08);
+    font:inherit;text-align:left;cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .task-btn:not(:disabled):hover,
+  .task-btn:not(:disabled):focus-visible{
+    transform:translateY(-3px);
+    box-shadow:0 12px 28px rgba(194,65,12,.18);
+    outline:none;
+  }
+  .task-btn.main{
+    background:linear-gradient(135deg,var(--primary),var(--accent));
+    color:#fff;border-color:transparent;
+  }
+  .task-btn:disabled{opacity:.6;cursor:not-allowed}
+  .task-icon{font-size:2rem;line-height:1}
+  .task-name{font-weight:700;font-size:1rem;line-height:1.3}
+  .task-desc{font-size:.8rem;opacity:.85;line-height:1.35}
+  .task-tag{
+    margin-top:auto;font-size:.72rem;font-weight:600;
+    background:rgba(255,255,255,.7);color:var(--primary);
+    border-radius:999px;padding:3px 9px;
+  }
+  .task-btn.main .task-tag{background:rgba(255,255,255,.25);color:#fff}
+
+  /* ===== Task view ===== */
+  .back-btn{
+    background:transparent;border:1px solid var(--border);color:var(--primary);
+    border-radius:999px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer;
+    margin-bottom:14px;
+  }
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:18px;
+    padding:20px;box-shadow:0 8px 24px rgba(194,65,12,.08);
+  }
+  .card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .card-head h2{margin:0;font-size:1.2rem}
+  .badge{background:var(--accent);color:#fff;border-radius:999px;padding:4px 10px;font-size:.75rem;font-weight:600}
+
+  label{display:block;font-weight:600;font-size:.9rem;margin-top:14px}
+  textarea{
+    display:block;width:100%;margin-top:6px;padding:10px 12px;
+    border:1px solid var(--border);border-radius:12px;
+    font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:14px;
+    background:#fff;color:var(--ink);resize:vertical;min-height:220px;
+  }
+  textarea:focus{outline:2px solid var(--accent);border-color:transparent}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .btn{border:0;border-radius:999px;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer}
+  .btn.primary{
+    background:linear-gradient(90deg,var(--primary),var(--primary-2));
+    color:#fff;box-shadow:0 4px 12px rgba(194,65,12,.3);
+  }
+  .btn.ghost{background:transparent;color:var(--primary);border:1px solid var(--border)}
+  .btn.small{padding:6px 12px;font-size:.85rem}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+
+  .muted{color:var(--muted);font-size:.85rem}
+  .row{display:flex;justify-content:flex-end;margin-top:4px}
+  .error{color:var(--danger)}
+  .warn{
+    background:#fef3c7;border:1px solid var(--accent);color:#92400e;
+    border-radius:12px;padding:10px 12px;margin-top:14px;font-size:.9rem;
+  }
+
+  .result-head{display:flex;justify-content:space-between;align-items:center;margin:22px 0 8px}
+  .result-head h3{margin:0;font-size:1rem}
+  .output{
+    background:#fff;border:1px dashed var(--border);border-radius:14px;
+    padding:16px;min-height:160px;max-height:62vh;overflow:auto;
+    line-height:1.6;overflow-wrap:anywhere;
+  }
+  .output h2,.output h3,.output h4{color:var(--primary);margin:16px 0 6px}
+  .output h2{font-size:1.1rem}.output h3{font-size:1.05rem}.output h4{font-size:1rem}
+  .output pre{
+    background:#2a1408;color:#ffedd5;padding:12px;border-radius:10px;
+    overflow:auto;font-size:13px;line-height:1.45;
+  }
+  .output code{font-family:ui-monospace,Consolas,"Courier New",monospace;background:#ffedd5;padding:1px 5px;border-radius:5px;font-size:.9em}
+  .output pre code{background:none;padding:0;color:inherit}
+
+  footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:24px}
+
+  @media (max-width:600px){
+    .wrap{padding:0 12px 30px}
+    .grid{grid-template-columns:repeat(2,1fr);gap:12px}
+    .task-btn{min-height:130px;padding:14px}
+    .card{padding:16px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧡 Andra's helper</h1>
+  <p>Asistentul tău zilnic pentru ABAP și SQL</p>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ DASHBOARD ============ -->
+  <section id="dashboard">
+    <h2 class="dash-title">Ce vrei să facem azi?</h2>
+    <div class="grid">
+      <button class="task-btn main" type="button" data-open="task1">
+        <span class="task-icon">⚡</span>
+        <span class="task-name">Optimizare cod ABAP</span>
+        <span class="task-desc">Analizează SELECT-uri și bucle lente și propune varianta optimizată.</span>
+        <span class="task-tag">Activ</span>
+      </button>
+
+      <button class="task-btn" type="button" disabled>
+        <span class="task-icon">🧩</span>
+        <span class="task-name">Task 2</span>
+        <span class="task-desc">Va fi definit ulterior.</span>
+        <span class="task-tag">În curând</span>
+      </button>
+
+      <button class="task-btn" type="button" disabled>
+        <span class="task-icon">📊</span>
+        <span class="task-name">Task 3</span>
+        <span class="task-desc">Va fi definit ulterior.</span>
+        <span class="task-tag">În curând</span>
+      </button>
+
+      <button class="task-btn" type="button" disabled>
+        <span class="task-icon">🗂️</span>
+        <span class="task-name">Task 4</span>
+        <span class="task-desc">Va fi definit ulterior.</span>
+        <span class="task-tag">În curând</span>
+      </button>
+
+      <button class="task-btn" type="button" disabled>
+        <span class="task-icon">🛠️</span>
+        <span class="task-name">Task 5</span>
+        <span class="task-desc">Va fi definit ulterior.</span>
+        <span class="task-tag">În curând</span>
+      </button>
+
+      <button class="task-btn" type="button" disabled>
+        <span class="task-icon">📝</span>
+        <span class="task-name">Task 6</span>
+        <span class="task-desc">Va fi definit ulterior.</span>
+        <span class="task-tag">În curând</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ TASK 1: OPTIMIZARE COD ABAP ============ -->
+  <section id="task1" class="hidden">
+    <button class="back-btn" id="backBtn" type="button">← Înapoi la dashboard</button>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Optimizare cod ABAP</h2>
+        <span class="badge">Claude · în timp real</span>
+      </div>
+
+      <div id="cfgWarn" class="warn hidden">
+        Aplicația nu este configurată încă: în script, înlocuiește <code>WORKER_URL_AICI</code> cu URL-ul Cloudflare Worker-ului tău.
+      </div>
+
+      <label for="code">Codul ABAP
+        <textarea id="code" placeholder="Lipește aici fragmentul ABAP (SELECT-uri, LOOP-uri, FOR ALL ENTRIES...)" spellcheck="false"></textarea>
+      </label>
+      <div class="row"><span id="count" class="muted">0 caractere</span></div>
+
+      <div class="actions">
+        <button id="runBtn" class="btn primary" type="button">Analizează ✨</button>
+        <button id="stopBtn" class="btn ghost hidden" type="button">Oprește</button>
+        <button id="clearBtn" class="btn ghost" type="button">Golește</button>
+      </div>
+
+      <div class="result-head">
+        <h3>Recomandări</h3>
+        <button id="copyBtn" class="btn ghost small" type="button">Copiază</button>
+      </div>
+      <div id="output" class="output" aria-live="polite">
+        <p class="muted">Recomandările apar aici, pe măsură ce sunt generate. Ctrl/⌘ + Enter pornește analiza.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>Andra's helper · versiunea 1</footer>
+</div>
+
+<script>
+  /* ============ CONFIGURARE ============ */
+  // Înlocuiește cu URL-ul Worker-ului Cloudflare (ex: https://andra-proxy.contul-tau.workers.dev)
+  const WORKER_URL = "https://andra-proxy.andratanase96.workers.dev/";
+  const MODEL = "claude-sonnet-5-5";
+  const MAX_TOKENS = 4096;
+
+  const SYSTEM_PROMPT = `Ești un Senior ABAP Developer și SQL Performance Engineer, cu experiență în SAP S/4HANA și în optimizarea Open SQL, Native SQL și CDS views. Analizezi fragmentele ABAP primite și propui optimizări concrete, fără a schimba semantica rezultatului.
+
+Răspunde în limba română, cu această structură:
+
+## Probleme identificate
+Listă ordonată după impact (MARE / MEDIU / MIC), cu construcția exactă: SELECT în LOOP, SELECT SINGLE repetat, SELECT *, FOR ALL ENTRIES fără verificarea tabelului gol, lipsa condițiilor WHERE, agregări făcute în ABAP în loc de GROUP BY pe baza de date, citiri repetate care ar trebui bufferate sau mutate în afara buclei.
+
+## Cod optimizat
+Versiunea îmbunătățită, completă, în blocuri de cod abap.
+
+## Ce s-a schimbat și de ce
+Explicație scurtă pentru fiecare modificare.
+
+## Riscuri și verificări
+Semantica (SY-SUBRC, duplicate, valori NULL, ordonare, FOR ALL ENTRIES cu tabel gol), dependența de release și de baza de date, indecșii necesari.
+
+## Testare și măsurare
+Cum se compară performanța înainte și după (ST05, SAT, ATC, runtime măsurat).
+
+Reguli:
+- Open SQL din ABAP nu acceptă, în mod uzual, CTE (clauza WITH). Dacă utilizatorul cere CTE, explică alternativele: JOIN-uri, subquery (dacă release-ul le permite), FOR ALL ENTRIES cu verificare, sau o CDS view. CTE apare în Native SQL (EXEC SQL / ADBC), în CDS sau în HANA SQL. Spune explicit ce depinde de release sau de baza de date.
+- Nu inventa tabele, câmpuri sau variabile care nu apar în cod. Dacă lipsesc informații (volume, indecși, release), spune ce trebuie verificat.
+- Dacă fragmentul nu are probleme reale de performanță, spune asta clar și nu forța optimizări.`;
+
+  /* ============ UTILITARE ============ */
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    dashboard: $("dashboard"), task1: $("task1"), backBtn: $("backBtn"),
+    code: $("code"), count: $("count"),
+    runBtn: $("runBtn"), stopBtn: $("stopBtn"), clearBtn: $("clearBtn"),
+    copyBtn: $("copyBtn"), output: $("output"), cfgWarn: $("cfgWarn")
+  };
+
+  let activeReader = null;
+  let stopRequested = false;
+  let lastText = "";
+
+  function esc(s){
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  // Randare simplă: blocuri ``` și câteva elemente Markdown de bază
+  function renderMarkdown(src){
+    return src.split("```").map((part, i) => {
+      if (i % 2 === 1){
+        const nl = part.indexOf("\n");
+        const code = nl >= 0 ? part.slice(nl + 1) : part;
+        return `<pre><code>${esc(code)}</code></pre>`;
+      }
+      return esc(part)
+        .replace(/^#### (.*)$/gm, "<h4>$1</h4>")
+        .replace(/^### (.*)$/gm, "<h4>$1</h4>")
+        .replace(/^## (.*)$/gm, "<h3>$1</h3>")
+        .replace(/^# (.*)$/gm, "<h2>$1</h2>")
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/`([^`\n]+)`/g, "<code>$1</code>")
+        .replace(/\n/g, "<br>");
+    }).join("");
+  }
+
+  function isConfigured(){
+    return /^https:\/\//.test(WORKER_URL) && WORKER_URL !== "WORKER_URL_AICI";
+  }
+
+  function setOutput(html){ els.output.innerHTML = html; }
+
+  function setBusy(busy){
+    els.runBtn.disabled = busy;
+    els.runBtn.textContent = busy ? "Se analizează…" : "Analizează ✨";
+    els.stopBtn.classList.toggle("hidden", !busy);
+  }
+
+  // Tipul de cod este fix: ABAP
+  function buildUserPrompt(){
+    return `Tip cod: ABAP (Open SQL)\n\nCodul de analizat:\n\`\`\`abap\n${els.code.value}\n\`\`\``;
+  }
+
+  /* ============ NAVIGARE ============ */
+  function showDashboard(){
+    stop();
+    els.task1.classList.add("hidden");
+    els.dashboard.classList.remove("hidden");
+    window.scrollTo(0, 0);
+  }
+
+  function showTask1(){
+    els.dashboard.classList.add("hidden");
+    els.task1.classList.remove("hidden");
+    window.scrollTo(0, 0);
+    els.code.focus();
+  }
+
+  /* ============ STREAMING ============ */
+  async function readStream(body){
+    const reader = body.getReader();
+    activeReader = reader;
+    if (stopRequested){ reader.cancel().catch(() => {}); return; }
+    const decoder = new TextDecoder();
+    let buf = "";
+
+    while (true){
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+
+      let nl;
+      while ((nl = buf.indexOf("\n")) !== -1){
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line.startsWith("data:")) continue;
+
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+
+        let evt;
+        try { evt = JSON.parse(data); } catch { continue; }
+
+        if (evt.type === "error") throw new Error(evt.error?.message || "Eroare în stream");
+        if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta"){
+          lastText += evt.delta.text;
+          els.output.innerHTML = renderMarkdown(lastText);
+          els.output.scrollTop = els.output.scrollHeight;
+        }
+      }
+    }
+  }
+
+  /* ============ ACȚIUNI ============ */
+  async function run(){
+    const code = els.code.value.trim();
+    if (!code){ setOutput('<p class="error">Lipește mai întâi un fragment de cod.</p>'); return; }
+    if (!isConfigured()){
+      els.cfgWarn.classList.remove("hidden");
+      setOutput('<p class="error">Lipsește URL-ul Worker-ului (WORKER_URL).</p>');
+      return;
+    }
+
+    lastText = "";
+    stopRequested = false;
+    setBusy(true);
+    setOutput('<p class="muted">Se conectează la Claude…</p>');
+
+    try{
+      const res = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: MAX_TOKENS,
+          stream: true,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: "user", content: buildUserPrompt() }]
+        })
+      });
+
+      if (!res.ok){
+        const txt = await res.text();
+        throw new Error(`HTTP ${res.status}: ${txt.slice(0, 300)}`);
+      }
+
+      await readStream(res.body);
+
+      if (stopRequested){
+        if (!lastText) setOutput('<p class="muted">Analiza a fost oprită.</p>');
+        return;
+      }
+      if (!lastText) throw new Error("Nu am primit conținut. Verifică Worker-ul și logurile din Cloudflare.");
+    }catch(err){
+      if (err.name === "AbortError"){
+        if (!lastText) setOutput('<p class="muted">Analiza a fost oprită.</p>');
+      } else {
+        setOutput(`<p class="error">Eroare: ${esc(err.message)}</p>`);
+      }
+    }finally{
+      activeReader = null;
+      setBusy(false);
+    }
+  }
+
+  function stop(){
+    stopRequested = true;
+    if (activeReader) activeReader.cancel().catch(() => {});
+  }
+
+  function clearAll(){
+    stop();
+    els.code.value = "";
+    lastText = "";
+    updateCount();
+    setOutput('<p class="muted">Recomandările apar aici, pe măsură ce sunt generate.</p>');
+    els.code.focus();
+  }
+
+  async function copyResult(){
+    if (!lastText) return;
+    try{
+      await navigator.clipboard.writeText(lastText);
+      els.copyBtn.textContent = "Copiat ✓";
+    }catch{
+      els.copyBtn.textContent = "Nu s-a putut copia";
+    }
+    setTimeout(() => { els.copyBtn.textContent = "Copiază"; }, 1500);
+  }
+
+  function updateCount(){
+    els.count.textContent = `${els.code.value.length} caractere`;
+  }
+
+  /* ============ EVENIMENTE ============ */
+  document.querySelectorAll("[data-open]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.open === "task1") showTask1();
+    });
+  });
+  els.backBtn.addEventListener("click", showDashboard);
+  els.runBtn.addEventListener("click", run);
+  els.stopBtn.addEventListener("click", stop);
+  els.clearBtn.addEventListener("click", clearAll);
+  els.copyBtn.addEventListener("click", copyResult);
+  els.code.addEventListener("input", updateCount);
+  els.code.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter"){
+      e.preventDefault();
+      if (!els.runBtn.disabled) run();
+    }
+  });
+
+  if (!isConfigured()) els.cfgWarn.classList.remove("hidden");
+  updateCount();
+</script>
+</body>
+</html>
