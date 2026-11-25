@@ -9,6 +9,8 @@
 <meta name="apple-mobile-web-app-title" content="Andra's helper">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Andra's helper</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
 <style>
   :root{
     --card:#fffbf5; --ink:#431407; --muted:#9a6b4f;
@@ -208,6 +210,12 @@
   }
   .gc-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 
+  /* ===== Task 6: minută din Excel ===== */
+  input[type="file"]{
+    display:block;width:100%;margin-top:6px;padding:12px;border:1px dashed var(--border);
+    border-radius:12px;background:#fff;color:var(--ink);font:inherit;
+  }
+
   @media (max-width:600px){
     .wrap{padding:0 12px 30px}
     .grid{grid-template-columns:repeat(2,1fr);gap:12px}
@@ -264,11 +272,11 @@
         <span class="task-tag">Nou</span>
       </button>
 
-      <button class="task-btn" type="button" disabled>
+      <button class="task-btn" type="button" data-open="task6">
         <span class="task-icon">📝</span>
-        <span class="task-name">Task 6</span>
-        <span class="task-desc">Va fi definit ulterior.</span>
-        <span class="task-tag">În curând</span>
+        <span class="task-name">Minută CAB</span>
+        <span class="task-desc">Transformă Excel-ul cu subiectele în minută Word.</span>
+        <span class="task-tag">Nou</span>
       </button>
     </div>
   </section>
@@ -432,6 +440,30 @@
     </div>
   </section>
 
+  <!-- ============ TASK 6: MINUTĂ DIN EXCEL ============ -->
+  <section id="task6" class="hidden">
+    <button class="back-btn" id="backBtn6" type="button">← Înapoi la dashboard</button>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Minută CAB din Excel</h2>
+        <span class="badge">Word (.docx)</span>
+      </div>
+      <p class="muted">Încarcă Excel-ul cu subiectele. Coloana <strong>Subiect</strong> este obligatorie. În <strong>Status</strong> scrie „aprobat”, „neaprobat” sau „șters”. Opțional: <strong>Responsabil</strong>, <strong>Termen</strong>, <strong>Observații</strong>. Data minutei se ia din Ciclu CAB, dacă este completată.</p>
+
+      <label>Fișier Excel
+        <input id="m_file" type="file" accept=".xlsx,.xls,.csv">
+      </label>
+
+      <div id="m_summary" class="info-line muted">Încarcă un fișier pentru a vedea numărul de subiecte pe categorii.</div>
+      <div id="m_status" class="muted" style="margin-top:12px"></div>
+
+      <div class="actions">
+        <button id="m_gen" class="btn primary" type="button" disabled>Generează minuta (.docx)</button>
+      </div>
+    </div>
+  </section>
+
   <footer>Andra's helper · versiunea 1</footer>
 </div>
 
@@ -527,6 +559,7 @@ Reguli:
     $("task3").classList.add("hidden");
     $("task4").classList.add("hidden");
     $("task5").classList.add("hidden");
+    $("task6").classList.add("hidden");
     els.dashboard.classList.remove("hidden");
     window.scrollTo(0, 0);
   }
@@ -1253,6 +1286,139 @@ Reguli:
   $("g_min").addEventListener("click", addMinute);
   $("backBtn5").addEventListener("click", showDashboard);
 
+  /* ============ TASK 6: EXCEL → MINUTĂ WORD ============ */
+  // Structura minutei este un șablon provizoriu: se modifică în buildDocXml()
+  let minuteRows = null;
+
+  const setMinStatus = (html) => { $("m_status").innerHTML = html; };
+
+  function getField(row, names){
+    const key = Object.keys(row).find((k) => names.some((n) => norm(k) === n || norm(k).includes(n)));
+    return key ? String(row[key]).trim() : "";
+  }
+
+  // Clasifică după text, indiferent de diacritice: „neaprobat” înaintea „aprobat”
+  function classify(status){
+    const s = norm(status);
+    if (s.includes("neaprob")) return "neaprobate";
+    if (s.includes("aprob")) return "aprobate";
+    if (s.includes("ster")) return "sterse";
+    return null;
+  }
+
+  async function readExcel(file){
+    if (!window.XLSX) throw new Error("biblioteca Excel nu s-a încărcat (verifică conexiunea)");
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    const out = { aprobate: [], neaprobate: [], sterse: [], altele: [] };
+    for (const r of rows){
+      const subiect = getField(r, ["subiect"]);
+      if (!subiect) continue;
+      const item = {
+        subiect,
+        responsabil: getField(r, ["responsabil"]),
+        termen: getField(r, ["termen"]),
+        observatii: getField(r, ["observ"])
+      };
+      out[classify(getField(r, ["status"])) || "altele"].push(item);
+    }
+    return out;
+  }
+
+  const xmlEsc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+  function wPara(text, { bold = false, size = 22 } = {}){
+    return `<w:p><w:r><w:rPr>${bold ? "<w:b/>" : ""}<w:sz w:val="${size}"/></w:rPr><w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r></w:p>`;
+  }
+
+  // Șablonul documentului: aici modifici structura când o decidem
+  function buildDocXml(data, dateTxt){
+    const parts = [];
+    parts.push(wPara(dateTxt ? `Minuta CAB – ${dateTxt}` : "Minuta CAB", { bold: true, size: 32 }));
+
+    const section = (title, items, emptyTxt) => {
+      parts.push(wPara(title, { bold: true, size: 26 }));
+      if (!items.length){ parts.push(wPara(emptyTxt)); return; }
+      items.forEach((it, i) => {
+        parts.push(wPara(`${i + 1}. ${it.subiect}`, { bold: true }));
+        const meta = [
+          it.responsabil && `Responsabil: ${it.responsabil}`,
+          it.termen && `Termen: ${it.termen}`
+        ].filter(Boolean).join(" · ");
+        if (meta) parts.push(wPara(meta));
+        if (it.observatii) parts.push(wPara(`Observații: ${it.observatii}`));
+      });
+    };
+
+    section("Subiecte aprobate (următoarele 8 săptămâni)", data.aprobate, "Niciun subiect aprobat.");
+    section("Subiecte neaprobate", data.neaprobate, "Niciun subiect neaprobat.");
+    section("Subiecte șterse", data.sterse, "Niciun subiect șters.");
+    return parts.join("");
+  }
+
+  // .docx minimal: un ZIP cu trei fișiere XML
+  async function buildDocx(bodyXml){
+    if (!window.JSZip) throw new Error("biblioteca ZIP nu s-a încărcat (verifică conexiunea)");
+    const head = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`;
+    const zip = new JSZip();
+    zip.file("[Content_Types].xml", `${head}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+    zip.file("_rels/.rels", `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+    zip.file("word/document.xml", `${head}<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${bodyXml}<w:sectPr/></w:body></w:document>`);
+    return zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+  }
+
+  function saveBlob(blob, name){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function onMinuteFile(e){
+    const file = e.target.files[0];
+    if (!file) return;
+    setMinStatus("Citesc fișierul…");
+    try{
+      minuteRows = await readExcel(file);
+      const m = minuteRows;
+      let summary = `<strong>${m.aprobate.length}</strong> aprobate · <strong>${m.neaprobate.length}</strong> neaprobate · <strong>${m.sterse.length}</strong> șterse`;
+      if (m.altele.length) summary += ` · <span class="error">${m.altele.length} fără status recunoscut (ignorate)</span>`;
+      $("m_summary").innerHTML = summary;
+      $("m_gen").disabled = false;
+      setMinStatus("Fișier citit. Apasă „Generează minuta”.");
+    }catch(err){
+      minuteRows = null;
+      $("m_gen").disabled = true;
+      setMinStatus(`<span class="error">Eroare: ${esc(err.message)}</span>`);
+    }
+  }
+
+  async function generateMinute(){
+    if (!minuteRows) return;
+    const cabVal = $("c_date").value;
+    const dateTxt = cabVal ? parseDay(cabVal).toLocaleDateString("ro-RO", { day: "numeric", month: "long", year: "numeric" }) : "";
+    try{
+      const blob = await buildDocx(buildDocXml(minuteRows, dateTxt));
+      saveBlob(blob, "minuta-cab.docx");
+      setMinStatus("✓ Minuta a fost generată și descărcată.");
+    }catch(err){
+      setMinStatus(`<span class="error">Eroare: ${esc(err.message)}</span>`);
+    }
+  }
+
+  function showTask6(){
+    els.dashboard.classList.add("hidden");
+    $("task6").classList.remove("hidden");
+    window.scrollTo(0, 0);
+  }
+
+  $("m_file").addEventListener("change", onMinuteFile);
+  $("m_gen").addEventListener("click", generateMinute);
+  $("backBtn6").addEventListener("click", showDashboard);
+
   /* ============ EVENIMENTE ============ */
   document.querySelectorAll("[data-open]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1261,6 +1427,7 @@ Reguli:
       if (btn.dataset.open === "task3") showTask3();
       if (btn.dataset.open === "task4") showTask4();
       if (btn.dataset.open === "task5") showTask5();
+      if (btn.dataset.open === "task6") showTask6();
     });
   });
   els.backBtn.addEventListener("click", showDashboard);
