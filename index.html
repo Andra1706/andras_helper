@@ -182,6 +182,16 @@
   .res-desc{margin-top:6px;line-height:1.5}
   .res-match{margin-top:8px;font-size:.8rem}
 
+  /* ===== Task 4: specificații tehnice ===== */
+  .thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+  .thumb{position:relative;width:110px;height:80px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb button{
+    position:absolute;top:4px;right:4px;width:24px;height:24px;border:0;border-radius:999px;
+    background:rgba(67,20,7,.75);color:#fff;cursor:pointer;font-size:12px;line-height:24px;padding:0;
+  }
+  .spec-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+
   @media (max-width:600px){
     .wrap{padding:0 12px 30px}
     .grid{grid-template-columns:repeat(2,1fr);gap:12px}
@@ -224,11 +234,11 @@
         <span class="task-tag">Nou</span>
       </button>
 
-      <button class="task-btn" type="button" disabled>
-        <span class="task-icon">🗂️</span>
-        <span class="task-name">Task 4</span>
-        <span class="task-desc">Va fi definit ulterior.</span>
-        <span class="task-tag">În curând</span>
+      <button class="task-btn" type="button" data-open="task4">
+        <span class="task-icon">🧾</span>
+        <span class="task-name">Specificație tehnică</span>
+        <span class="task-desc">Generează specificația din codul și capturile tale, în română.</span>
+        <span class="task-tag">Nou</span>
       </button>
 
       <button class="task-btn" type="button" disabled>
@@ -317,6 +327,49 @@
       <input id="tQuery" type="search" placeholder="ex: blocare, autorizare, SE11" autocomplete="off">
       <div id="tStatus" class="muted" style="margin-top:8px"></div>
       <div id="tResults"></div>
+    </div>
+  </section>
+
+  <!-- ============ TASK 4: SPECIFICAȚII TEHNICE ============ -->
+  <section id="task4" class="hidden">
+    <button class="back-btn" id="backBtn4" type="button">← Înapoi la dashboard</button>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Specificație tehnică din cod</h2>
+        <span class="badge">Claude · în română</span>
+      </div>
+
+      <label for="s_code">Codul tău ABAP</label>
+      <textarea id="s_code" placeholder="Lipește codul dezvoltării (program, clasă, funcție, include...)" spellcheck="false"></textarea>
+
+      <label for="s_ctx">Context (opțional): ticket, cerința funcțională, obiectiv</label>
+      <textarea id="s_ctx" style="min-height:90px" placeholder="ex: CR-1234, calcul comision agenți la facturare"></textarea>
+
+      <label>Capturi de ecran (opțional, până la 5)</label>
+      <input id="s_imgs" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple class="hidden">
+      <div class="spec-row">
+        <button id="s_pick" class="btn ghost small" type="button">+ Adaugă capturi</button>
+        <span id="s_imgcount" class="muted"></span>
+      </div>
+      <div id="s_thumbs" class="thumbs"></div>
+
+      <div class="actions">
+        <button id="s_run" class="btn primary" type="button">Generează specificația ✨</button>
+        <button id="s_stop" class="btn ghost hidden" type="button">Oprește</button>
+        <button id="s_clear" class="btn ghost" type="button">Golește</button>
+      </div>
+
+      <div class="result-head">
+        <h3>Specificație</h3>
+        <div class="spec-row" style="margin-top:0">
+          <button id="s_copy" class="btn ghost small" type="button">Copiază</button>
+          <button id="s_dl" class="btn ghost small" type="button">Descarcă .md</button>
+        </div>
+      </div>
+      <div id="s_out" class="output" aria-live="polite">
+        <p class="muted">Specificația apare aici, pe măsură ce este generată.</p>
+      </div>
     </div>
   </section>
 
@@ -413,6 +466,7 @@ Reguli:
     els.task1.classList.add("hidden");
     $("task2").classList.add("hidden");
     $("task3").classList.add("hidden");
+    $("task4").classList.add("hidden");
     els.dashboard.classList.remove("hidden");
     window.scrollTo(0, 0);
   }
@@ -766,12 +820,237 @@ Reguli:
   $("tQuery").addEventListener("input", runSearch);
   $("backBtn3").addEventListener("click", showDashboard);
 
+  /* ============ TASK 4: SPECIFICAȚII TEHNICE ============ */
+  const MAX_IMAGES = 5;
+  const MAX_IMG_BYTES = 5 * 1024 * 1024;
+  let images = []; // { name, mediaType, data (base64), url (previzualizare) }
+  let specText = "";
+  let specReader = null;
+  let specStop = false;
+
+  const SPEC_PROMPT = `Ești un analist tehnic și Senior ABAP Developer. Scrii specificații tehnice în limba română, clare și complete, pentru dezvoltările SAP ABAP primite de la programator. Primești cod ABAP și, opțional, capturi de ecran (ecrane SAP, rezultate, tabele, diagrame) și un context.
+
+Structura obligatorie, în Markdown:
+
+## 1. Scop și context
+## 2. Obiecte implicate
+Programe, clase, module funcționale, includeri, tranzacții, ecrane.
+## 3. Tabele și câmpuri utilizate
+Tabel, cheie, câmpuri folosite și rolul lor.
+## 4. Descriere funcțională
+Ce face soluția, din perspectiva utilizatorului sau a consultantului funcțional.
+## 5. Descriere tehnică
+Fluxul pas cu pas, algoritmul, selecțiile, buclele, apelurile.
+## 6. Validări și mesaje
+## 7. Erori și excepții tratate
+## 8. Interfețe și dependențe
+Transport, autorizări, configurări, enhancement-uri.
+## 9. Teste propuse
+Scenarii de test cu date de intrare și rezultat așteptat.
+
+Reguli:
+- Scrie în română. Termenii tehnici SAP rămân în engleză sau în forma lor din cod (de exemplu SELECT, LOOP, BAPI).
+- Nu inventa obiecte, câmpuri sau comportamente care nu apar în cod, în context sau în capturi. Dacă lipsesc informații, scrie „De confirmat:” și spune ce lipsește.
+- La capturi, descrie ce arată fiecare și leagă informațiile de cod acolo unde se potrivesc.
+- Fii concis: fraze scurte, liste unde ajută, fără repetiții.`;
+
+  function readAsBase64(file){
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result).split(",")[1]);
+      fr.onerror = () => reject(fr.error);
+      fr.readAsDataURL(file);
+    });
+  }
+
+  function renderThumbs(){
+    $("s_thumbs").innerHTML = images.map((img, i) => `
+      <div class="thumb">
+        <img src="${img.url}" alt="${esc(img.name)}">
+        <button type="button" data-rm="${i}" aria-label="Șterge captura">✕</button>
+      </div>`).join("");
+    $("s_imgcount").textContent = `${images.length}/${MAX_IMAGES} capturi`;
+  }
+
+  async function onPickImages(e){
+    const files = [...e.target.files];
+    e.target.value = "";
+    for (const f of files){
+      if (images.length >= MAX_IMAGES){ $("s_imgcount").textContent = `Maximum ${MAX_IMAGES} capturi.`; break; }
+      if (!f.type.startsWith("image/")) continue;
+      if (f.size > MAX_IMG_BYTES){ $("s_imgcount").textContent = `${f.name} depășește 5 MB.`; continue; }
+      const data = await readAsBase64(f);
+      images.push({ name: f.name, mediaType: f.type, data, url: URL.createObjectURL(f) });
+    }
+    renderThumbs();
+  }
+
+  function removeImage(i){
+    const [img] = images.splice(i, 1);
+    if (img) URL.revokeObjectURL(img.url);
+    renderThumbs();
+  }
+
+  function buildSpecContent(){
+    const blocks = images.map((img) => ({
+      type: "image",
+      source: { type: "base64", media_type: img.mediaType, data: img.data }
+    }));
+    const code = $("s_code").value;
+    const ctx = $("s_ctx").value.trim() || "nespecificat";
+    const note = images.length ? `\n\nAm atașat ${images.length} captură/capturi de ecran. Descrie ce arată și integrează informațiile în specificație.` : "";
+    blocks.push({
+      type: "text",
+      text: `Context: ${ctx}\n\nCodul ABAP:\n\`\`\`abap\n${code || "(fără cod, doar capturi)"}\n\`\`\`${note}`
+    });
+    return blocks;
+  }
+
+  function setSpecOut(html){ $("s_out").innerHTML = html; }
+
+  function setSpecBusy(busy){
+    $("s_run").disabled = busy;
+    $("s_run").textContent = busy ? "Se generează…" : "Generează specificația ✨";
+    $("s_stop").classList.toggle("hidden", !busy);
+  }
+
+  async function readSpecStream(body){
+    const reader = body.getReader();
+    specReader = reader;
+    if (specStop){ reader.cancel().catch(() => {}); return; }
+    const decoder = new TextDecoder();
+    let buf = "";
+    while (true){
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) !== -1){
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        let evt;
+        try { evt = JSON.parse(data); } catch { continue; }
+        if (evt.type === "error") throw new Error(evt.error?.message || "Eroare în stream");
+        if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta"){
+          specText += evt.delta.text;
+          setSpecOut(renderMarkdown(specText));
+          $("s_out").scrollTop = $("s_out").scrollHeight;
+        }
+      }
+    }
+  }
+
+  async function runSpec(){
+    const code = $("s_code").value.trim();
+    if (!code && !images.length){
+      setSpecOut('<p class="error">Adaugă cel puțin cod sau o captură de ecran.</p>');
+      return;
+    }
+    if (!isConfigured()){
+      setSpecOut('<p class="error">Lipsește URL-ul Worker-ului (WORKER_URL).</p>');
+      return;
+    }
+
+    specText = "";
+    specStop = false;
+    setSpecBusy(true);
+    setSpecOut('<p class="muted">Se generează specificația…</p>');
+
+    try{
+      const res = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: 6000,
+          stream: true,
+          system: SPEC_PROMPT,
+          messages: [{ role: "user", content: buildSpecContent() }]
+        })
+      });
+      if (!res.ok){
+        const txt = await res.text();
+        throw new Error(`HTTP ${res.status}: ${txt.slice(0, 300)}`);
+      }
+      await readSpecStream(res.body);
+      if (!specText && !specStop) throw new Error("Nu am primit conținut. Verifică Worker-ul.");
+      if (specStop && !specText) setSpecOut('<p class="muted">Generarea a fost oprită.</p>');
+    }catch(err){
+      setSpecOut(`<p class="error">Eroare: ${esc(err.message)}</p>`);
+    }finally{
+      specReader = null;
+      setSpecBusy(false);
+    }
+  }
+
+  function stopSpec(){
+    specStop = true;
+    if (specReader) specReader.cancel().catch(() => {});
+  }
+
+  function clearSpec(){
+    stopSpec();
+    $("s_code").value = "";
+    $("s_ctx").value = "";
+    images.forEach((img) => URL.revokeObjectURL(img.url));
+    images = [];
+    renderThumbs();
+    specText = "";
+    setSpecOut('<p class="muted">Specificația apare aici, pe măsură ce este generată.</p>');
+  }
+
+  async function copySpec(){
+    if (!specText) return;
+    try{
+      await navigator.clipboard.writeText(specText);
+      $("s_copy").textContent = "Copiat ✓";
+    }catch{
+      $("s_copy").textContent = "Nu s-a putut copia";
+    }
+    setTimeout(() => { $("s_copy").textContent = "Copiază"; }, 1500);
+  }
+
+  function downloadSpec(){
+    if (!specText) return;
+    const blob = new Blob([specText], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "specificatie.md";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function showTask4(){
+    els.dashboard.classList.add("hidden");
+    $("task4").classList.remove("hidden");
+    window.scrollTo(0, 0);
+    $("s_code").focus();
+  }
+
+  $("s_imgs").addEventListener("change", onPickImages);
+  $("s_pick").addEventListener("click", () => $("s_imgs").click());
+  $("s_thumbs").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-rm]");
+    if (btn) removeImage(Number(btn.dataset.rm));
+  });
+  $("s_run").addEventListener("click", runSpec);
+  $("s_stop").addEventListener("click", stopSpec);
+  $("s_clear").addEventListener("click", clearSpec);
+  $("s_copy").addEventListener("click", copySpec);
+  $("s_dl").addEventListener("click", downloadSpec);
+  $("backBtn4").addEventListener("click", showDashboard);
+
   /* ============ EVENIMENTE ============ */
   document.querySelectorAll("[data-open]").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (btn.dataset.open === "task1") showTask1();
       if (btn.dataset.open === "task2") showTask2();
       if (btn.dataset.open === "task3") showTask3();
+      if (btn.dataset.open === "task4") showTask4();
     });
   });
   els.backBtn.addEventListener("click", showDashboard);
