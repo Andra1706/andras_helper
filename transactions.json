@@ -1,0 +1,182 @@
+[
+  {
+    "tcode": "SE80",
+    "descriere": "Object Navigator: navigare și dezvoltare obiecte ABAP (programe, clase, pachete, funcții).",
+    "modul": "ABAP Workbench",
+    "cuvinte_cheie": ["navigare", "obiect", "program", "clasa", "pachet", "dezvoltare", "object navigator"]
+  },
+  {
+    "tcode": "SE38",
+    "descriere": "ABAP Editor: editare și rulare programe ABAP (report-uri).",
+    "modul": "ABAP Workbench",
+    "cuvinte_cheie": ["program", "editor", "report", "cod", "rulare", "abap editor"]
+  },
+  {
+    "tcode": "SE37",
+    "descriere": "Function Builder: creare, editare și testare module funcționale (function modules, BAPI, RFC).",
+    "modul": "ABAP Workbench",
+    "cuvinte_cheie": ["function module", "modul functional", "bapi", "rfc", "functie", "test functie"]
+  },
+  {
+    "tcode": "SE24",
+    "descriere": "Class Builder: creare și editare clase și interfețe ABAP (programare orientată pe obiecte).",
+    "modul": "ABAP Workbench",
+    "cuvinte_cheie": ["clasa", "class", "oo", "oop", "metoda", "interfata", "class builder"]
+  },
+  {
+    "tcode": "SE11",
+    "descriere": "ABAP Dictionary: tabele, structuri, domenii, elemente de date, view-uri și indecși.",
+    "modul": "ABAP Dictionary",
+    "cuvinte_cheie": ["tabel", "structura", "domeniu", "element de date", "view", "dictionar", "table", "index"]
+  },
+  {
+    "tcode": "SE16N",
+    "descriere": "Data Browser: vizualizare și filtrare conținutul tabelelor din sistem.",
+    "modul": "ABAP Dictionary",
+    "cuvinte_cheie": ["date tabel", "vizualizare tabel", "filtru", "afisare date", "browser", "select", "data browser"]
+  },
+  {
+    "tcode": "SE51",
+    "descriere": "Screen Painter: proiectare ecrane (dynpro) și câmpurile lor.",
+    "modul": "ABAP Workbench",
+    "cuvinte_cheie": ["ecran", "dynpro", "screen", "layout", "campuri ecran"]
+  },
+  {
+    "tcode": "SE41",
+    "descriere": "Menu Painter: proiectare meniuri, bare de butoane și GUI status.",
+    "modul": "ABAP Workbench",
+    "cuvinte_cheie": ["meniu", "gui status", "bara butoane", "menu painter", "status"]
+  },
+  {
+    "tcode": "SE93",
+    "descriere": "Maintain Transaction Codes: creare tranzacții (tcode) și asocierea lor cu programe sau ecrane.",
+    "modul": "ABAP Workbench",
+    "cuvinte_cheie": ["transaction", "tcode", "tranzactie", "creare tcode", "asociere program"]
+  },
+  {
+    "tcode": "SE91",
+    "descriere": "Message Maintenance: clase de mesaje și textele lor.",
+    "modul": "ABAP Workbench",
+    "cuvinte_cheie": ["mesaj", "mesaje", "clasa mesaje", "message class", "text mesaj"]
+  },
+  {
+    "tcode": "SE63",
+    "descriere": "Translation: traducerea textelor din obiecte ABAP, ecrane și documentație.",
+    "modul": "ABAP Workbench",
+    "cuvinte_cheie": ["traducere", "translation", "limba", "texte traduse", "logon language"]
+  },
+  {
+    "tcode": "SE09",
+    "descriere": "Workbench Organizer: vizualizarea și gestionarea cererilor de transport de tip workbench.",
+    "modul": "Transport",
+    "cuvinte_cheie": ["transport", "cerere transport", "workbench", "transport request"]
+  },
+  {
+    "tcode": "SE10",
+    "descriere": "Customizing Organizer: vizualizarea și gestionarea cererilor de transport pentru customizing.",
+    "modul": "Transport",
+    "cuvinte_cheie": ["customizing", "transport customizing", "setari", "cerere customizing"]
+  },
+  {
+    "tcode": "SE01",
+    "descriere": "Transport Organizer: gestionarea cererilor de transport (eliberare, import, detalii).",
+    "modul": "Transport",
+    "cuvinte_cheie": ["transport", "import", "release", "cerere", "transport organizer", "eliberare"]
+  },
+  {
+    "tcode": "SE14",
+    "descriere": "Database Utility: ajustarea sau reconstruirea tabelelor din dicționar. Atenție: poate modifica datele, folosește cu grijă.",
+    "modul": "ABAP Dictionary",
+    "cuvinte_cheie": ["reconstruire", "tabela", "db utility", "indecsi", "ajustare tabela"]
+  },
+  {
+    "tcode": "SE21",
+    "descriere": "Package Builder: creare și gestionare pachete de dezvoltare.",
+    "modul": "ABAP Workbench",
+    "cuvinte_cheie": ["pachet", "package", "developer class", "clasa dezvoltare"]
+  },
+  {
+    "tcode": "SE18",
+    "descriere": "BAdI Builder: definirea BAdI-urilor (business add-ins) pentru extinderea aplicațiilor standard.",
+    "modul": "Enhancements",
+    "cuvinte_cheie": ["badi", "enhancement", "definitie badi", "extindere"]
+  },
+  {
+    "tcode": "SE19",
+    "descriere": "BAdI Implementation: implementarea BAdI-urilor și a altor enhancement-uri.",
+    "modul": "Enhancements",
+    "cuvinte_cheie": ["badi", "implementare", "enhancement", "implementation", "extindere"]
+  },
+  {
+    "tcode": "SM30",
+    "descriere": "Table/View Maintenance: întreținerea datelor de configurare prin view-uri de tabele.",
+    "modul": "Sistem",
+    "cuvinte_cheie": ["configurare", "view", "tabela configurare", "maintenance view", "date configurare"]
+  },
+  {
+    "tcode": "SM37",
+    "descriere": "Job Overview: monitorizarea și analiza joburilor background.",
+    "modul": "Sistem",
+    "cuvinte_cheie": ["job", "background", "joburi", "jobs", "rulare job", "status job"]
+  },
+  {
+    "tcode": "SM50",
+    "descriere": "Work Process Overview: procesele de lucru active din instanța curentă.",
+    "modul": "Sistem",
+    "cuvinte_cheie": ["procese", "work process", "instanta", "blocat", "runtime", "loop"]
+  },
+  {
+    "tcode": "SM21",
+    "descriere": "System Log: jurnalul sistemului cu erori și evenimente tehnice.",
+    "modul": "Sistem",
+    "cuvinte_cheie": ["log sistem", "erori sistem", "system log", "jurnal"]
+  },
+  {
+    "tcode": "SM12",
+    "descriere": "Lock Entries: vizualizarea și ștergerea blocărilor (enqueue) din sistem.",
+    "modul": "Sistem",
+    "cuvinte_cheie": ["blocare", "lock", "enqueue", "blocaje", "deblocare"]
+  },
+  {
+    "tcode": "SM13",
+    "descriere": "Update Requests: cererile de update eșuate sau în așteptare.",
+    "modul": "Sistem",
+    "cuvinte_cheie": ["update", "cereri update", "vb", "eroare update"]
+  },
+  {
+    "tcode": "ST22",
+    "descriere": "ABAP Dump Analysis: analiza erorilor de runtime (short dump-uri).",
+    "modul": "Diagnoză",
+    "cuvinte_cheie": ["dump", "eroare runtime", "short dump", "runtime error", "dump analysis"]
+  },
+  {
+    "tcode": "SU53",
+    "descriere": "Authorization Check: ultima verificare de autorizare eșuată pentru utilizatorul curent.",
+    "modul": "Autorizări",
+    "cuvinte_cheie": ["autorizare", "authorization", "lipsa autorizare", "auth check", "drepturi"]
+  },
+  {
+    "tcode": "SU01",
+    "descriere": "User Maintenance: creare și întreținere utilizatori.",
+    "modul": "Autorizări",
+    "cuvinte_cheie": ["utilizator", "user", "creare user", "parola", "user maintenance"]
+  },
+  {
+    "tcode": "PFCG",
+    "descriere": "Role Maintenance: creare și gestionare roluri de autorizare.",
+    "modul": "Autorizări",
+    "cuvinte_cheie": ["rol", "roluri", "autorizari", "role", "profile", "pfcg"]
+  },
+  {
+    "tcode": "ST05",
+    "descriere": "SQL Trace: urmărirea instrucțiunilor SQL pentru analiza performanței.",
+    "modul": "Diagnoză",
+    "cuvinte_cheie": ["sql trace", "trace", "performanta", "select", "urmarire sql"]
+  },
+  {
+    "tcode": "SAT",
+    "descriere": "ABAP Runtime Analysis: profilarea timpului de execuție al programelor (în versiuni vechi: SE30).",
+    "modul": "Diagnoză",
+    "cuvinte_cheie": ["performanta", "profilare", "runtime analysis", "timp executie", "optimizare", "sat", "se30"]
+  }
+]

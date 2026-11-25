@@ -132,6 +132,43 @@
 
   footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:24px}
 
+  /* ===== Task 2: relații tabele ===== */
+  .mod-tabs{display:flex;gap:8px;margin:16px 0 4px}
+  .mod-tab{
+    flex:1;background:#fff;color:var(--ink);border:1px solid var(--border);
+    border-radius:999px;padding:10px;font:inherit;font-weight:700;cursor:pointer;
+  }
+  .mod-tab.active{
+    background:linear-gradient(90deg,var(--primary),var(--accent));color:#fff;border-color:transparent;
+  }
+  .tbl{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px}
+  .tbl-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .tbl-name{font-weight:800;color:var(--primary);font-size:1.05rem;font-family:ui-monospace,Consolas,monospace}
+  .tbl-desc{color:var(--muted);font-size:.85rem;margin:2px 0 6px}
+  .chip{display:inline-block;border-radius:999px;padding:3px 9px;font-size:.78rem;margin:3px 4px 0 0;font-family:ui-monospace,Consolas,monospace}
+  .chip.key{background:var(--primary);color:#fff;font-weight:700}
+  .chip.field{background:#ffedd5;color:var(--ink)}
+  .tag-verify{background:#fef3c7;color:#92400e;border-radius:999px;padding:2px 8px;font-size:.72rem;font-weight:700}
+  .links-title{margin:18px 0 8px;font-weight:800;color:var(--ink)}
+  .link{
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+    background:#fff;border:1px dashed var(--border);border-radius:12px;
+    padding:10px 12px;margin-bottom:8px;font-family:ui-monospace,Consolas,monospace;font-size:.85rem;
+  }
+  .link .arrow{color:var(--primary);font-weight:700}
+  .link .abap{background:#2a1408;color:#ffedd5;padding:4px 8px;border-radius:8px;font-size:.8rem}
+  .link small{width:100%;color:var(--muted);font-family:system-ui,sans-serif;font-size:.8rem}
+
+  .diagram{
+    width:100%;height:auto;display:block;background:#fff;
+    border:1px solid var(--border);border-radius:14px;margin:14px 0 4px;
+  }
+  .dg-box{fill:#fffbf5;stroke:var(--accent);stroke-width:2}
+  .dg-verify{stroke:#d97706;stroke-dasharray:6 4}
+  .dg-name{font:800 15px ui-monospace,Consolas,monospace;fill:var(--primary)}
+  .dg-key{font:11px ui-monospace,Consolas,monospace;fill:var(--muted)}
+  .dg-label{font:600 11px ui-monospace,Consolas,monospace;fill:#431407;paint-order:stroke;stroke:#fff;stroke-width:4px}
+
   @media (max-width:600px){
     .wrap{padding:0 12px 30px}
     .grid{grid-template-columns:repeat(2,1fr);gap:12px}
@@ -160,11 +197,11 @@
         <span class="task-tag">Activ</span>
       </button>
 
-      <button class="task-btn" type="button" disabled>
-        <span class="task-icon">🧩</span>
-        <span class="task-name">Task 2</span>
-        <span class="task-desc">Va fi definit ulterior.</span>
-        <span class="task-tag">În curând</span>
+      <button class="task-btn" type="button" data-open="task2">
+        <span class="task-icon">🔗</span>
+        <span class="task-name">Relații tabele</span>
+        <span class="task-desc">Chei și legături între tabelele din CS, SD și FICA.</span>
+        <span class="task-tag">Nou</span>
       </button>
 
       <button class="task-btn" type="button" disabled>
@@ -229,6 +266,27 @@
       <div id="output" class="output" aria-live="polite">
         <p class="muted">Recomandările apar aici, pe măsură ce sunt generate. Ctrl/⌘ + Enter pornește analiza.</p>
       </div>
+    </div>
+  </section>
+
+  <!-- ============ TASK 2: RELAȚII TABELE ============ -->
+  <section id="task2" class="hidden">
+    <button class="back-btn" id="backBtn2" type="button">← Înapoi la dashboard</button>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Relații între tabele</h2>
+        <span class="badge">CS · SD · FICA</span>
+      </div>
+      <p class="muted">Cheile tabelelor, câmpurile utile și legăturile dintre ele. Elementele marcate „verifică” confirmă-le în SE11 înainte de utilizare.</p>
+
+      <div class="mod-tabs">
+        <button class="mod-tab active" data-mod="CS" type="button">CS</button>
+        <button class="mod-tab" data-mod="SD" type="button">SD</button>
+        <button class="mod-tab" data-mod="FICA" type="button">FICA</button>
+      </div>
+
+      <div id="modContent"></div>
     </div>
   </section>
 
@@ -323,6 +381,7 @@ Reguli:
   function showDashboard(){
     stop();
     els.task1.classList.add("hidden");
+    $("task2").classList.add("hidden");
     els.dashboard.classList.remove("hidden");
     window.scrollTo(0, 0);
   }
@@ -450,10 +509,160 @@ Reguli:
     els.count.textContent = `${els.code.value.length} caractere`;
   }
 
+  /* ============ TASK 2: DATE RELAȚII ============ */
+  // Verifică fiecare cheie și câmp în SE11 înainte de utilizare. „verify: true” = nesigur, de confirmat.
+  const MODULES = {
+    CS: {
+      tables: [
+        { name:"EVER",   desc:"Contract (Vertrag)", key:["VERTRAG"], fields:["VKONTO","SPARTE","EINZDAT","AUSZDAT","ERDAT","ERNAM","AEDAT","AENAM"] },
+        { name:"FKKVKP", desc:"Cont contractual (FI-CA)", key:["VKONT"], fields:["GPART","BUKRS","WAERS","ERDAT","AEDAT"] },
+        { name:"BUT000", desc:"Partener de afaceri – date generale", key:["PARTNER"], fields:["TYPE","NAME_ORG1","NAME_LAST","NAME_FIRST","BU_SORT1","BU_GROUP"] },
+        { name:"EANL",   desc:"Instalație (Anlage)", key:["ANLAGE"], fields:["ANLART","SPARTE","ERDAT","AEDAT"], verify:true },
+        { name:"ERCH",   desc:"Document de facturare", key:["BELNR"], fields:["VKONT","ABRDATS","ERDAT"], verify:true }
+      ],
+      links: [
+        { a:"EVER",   af:"VKONTO", b:"FKKVKP", bf:"VKONT",  note:"Contractul indică contul contractual.", },
+        { a:"FKKVKP", af:"GPART",  b:"BUT000", bf:"PARTNER", note:"Contul contractual aparține partenerului de afaceri." },
+        { a:"ERCH",   af:"VKONT",  b:"FKKVKP", bf:"VKONT",  note:"Documentul de facturare aparține contului contractual.", verify:true }
+      ]
+    },
+    SD: {
+      tables: [
+        { name:"VBAK", desc:"Comandă de vânzare – antet", key:["VBELN"], fields:["AUART","VBTYP","VKORG","KUNNR","AUDAT","NETWR","WAERK"] },
+        { name:"VBAP", desc:"Comandă de vânzare – poziție", key:["VBELN","POSNR"], fields:["MATNR","ARKTX","PSTYV","KWMENG","VRKME","NETWR","WERKS","LGORT"] },
+        { name:"LIKP", desc:"Livrare – antet", key:["VBELN"], fields:["LFART","VSTEL","LFDAT","WADAT_IST","ERDAT"] },
+        { name:"LIPS", desc:"Livrare – poziție", key:["VBELN","POSNR"], fields:["MATNR","LFIMG","VRKME","WERKS","LGORT","VGBEL","VGPOS"] },
+        { name:"VBRK", desc:"Factură – antet", key:["VBELN"], fields:["FKART","FKDAT","KUNAG","KUNRG","NETWR","WAERK","BUKRS"] },
+        { name:"VBRP", desc:"Factură – poziție", key:["VBELN","POSNR"], fields:["MATNR","ARKTX","FKIMG","VRKME","NETWR","AUBEL","AUPOS"] },
+        { name:"KNA1", desc:"Client – date generale", key:["KUNNR"], fields:["NAME1","STRAS","PSTLZ","ORT01","LAND1","REGIO"] }
+      ],
+      links: [
+        { a:"VBAP", af:"VBELN", b:"VBAK", bf:"VBELN", note:"Poziția aparține comenzii (cheie comună VBELN, plus POSNR)." },
+        { a:"LIPS", af:"VGBEL", b:"VBAK", bf:"VBELN", note:"Poziția de livrare referă comanda de vânzare." },
+        { a:"LIPS", af:"VBELN", b:"LIKP", bf:"VBELN", note:"Poziția de livrare aparține antetului de livrare." },
+        { a:"VBRP", af:"AUBEL", b:"VBAK", bf:"VBELN", note:"Poziția de factură referă comanda de vânzare." },
+        { a:"VBRP", af:"VBELN", b:"VBRK", bf:"VBELN", note:"Poziția de factură aparține antetului de factură." },
+        { a:"VBAK", af:"KUNNR", b:"KNA1", bf:"KUNNR", note:"Comanda aparține clientului." }
+      ]
+    },
+    FICA: {
+      tables: [
+        { name:"FKKVKP", desc:"Cont contractual (FI-CA)", key:["VKONT"], fields:["GPART","BUKRS","WAERS","ERDAT","AEDAT"] },
+        { name:"FKKOP",  desc:"Poziție deschisă (open item)", key:["OPBEL","OPUPW","OPUPK","OPUPZ"], fields:["VKONT","FAEDN","BETRW","WAERS","HVORG","TVORG"], verify:true },
+        { name:"DFKKKO", desc:"Document FI-CA – antet", key:["OPBEL"], fields:["BUDAT","BLDAT","BUKRS","VKONT"], verify:true },
+        { name:"BUT000", desc:"Partener de afaceri – date generale", key:["PARTNER"], fields:["TYPE","NAME_ORG1","NAME_LAST","NAME_FIRST","BU_SORT1","BU_GROUP"] },
+        { name:"ERCH",   desc:"Document de facturare", key:["BELNR"], fields:["VKONT","ABRDATS","ERDAT"], verify:true }
+      ],
+      links: [
+        { a:"FKKOP",  af:"VKONT", b:"FKKVKP", bf:"VKONT",  note:"Poziția deschisă aparține contului contractual.", verify:true },
+        { a:"FKKVKP", af:"GPART", b:"BUT000", bf:"PARTNER", note:"Contul contractual aparține partenerului de afaceri." },
+        { a:"DFKKKO", af:"OPBEL", b:"FKKOP",  bf:"OPBEL",  note:"Antetul documentului referă pozițiile deschise.", verify:true },
+        { a:"ERCH",   af:"VKONT", b:"FKKVKP", bf:"VKONT",  note:"Documentul de facturare aparține contului contractual.", verify:true }
+      ]
+    }
+  };
+
+  // Poziții (colț stânga-sus) ale tabelelor în schemă, în coordonatele SVG
+  const LAYOUT = {
+    CS:   { EVER:[20,40], FKKVKP:[295,40], BUT000:[570,40], EANL:[20,250], ERCH:[295,250] },
+    SD:   { VBAP:[20,20], VBRP:[20,150], VBRK:[20,280], VBAK:[295,150], LIKP:[295,280], KNA1:[570,150], LIPS:[570,280] },
+    FICA: { DFKKKO:[20,20], FKKOP:[20,150], FKKVKP:[295,150], BUT000:[570,150], ERCH:[295,280] }
+  };
+
+  function renderDiagram(mod){
+    const m = MODULES[mod];
+    const pos = LAYOUT[mod];
+    const W = 170, H = 70;
+    const center = (name) => [pos[name][0] + W / 2, pos[name][1] + H / 2];
+
+    const lines = m.links.map((l) => {
+      const [ax, ay] = center(l.a);
+      const [bx, by] = center(l.b);
+      const dx = bx - ax, dy = by - ay;
+      const tx = dx ? (W / 2) / Math.abs(dx) : Infinity;
+      const ty = dy ? (H / 2) / Math.abs(dy) : Infinity;
+      const t = Math.min(tx, ty);
+      const x1 = ax + dx * t, y1 = ay + dy * t;
+      const x2 = bx - dx * t, y2 = by - dy * t;
+      const lx = (x1 + x2) / 2, ly = (y1 + y2) / 2 - 14;
+      const dash = l.verify ? ' stroke-dasharray="6 4"' : "";
+      const color = l.verify ? "#d97706" : "#c2410c";
+      return `
+        <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2"${dash} marker-end="url(#arrow-${mod})"/>
+        <text x="${lx}" y="${ly}" text-anchor="middle" class="dg-label"><tspan x="${lx}" dy="0">${esc(l.a)}.${esc(l.af)}</tspan><tspan x="${lx}" dy="13">= ${esc(l.b)}.${esc(l.bf)}</tspan></text>`;
+    }).join("");
+
+    const boxes = m.tables.map((t) => {
+      const [x, y] = pos[t.name];
+      const keyTxt = t.key.join(", ");
+      const shortKey = keyTxt.length > 26 ? keyTxt.slice(0, 25) + "…" : keyTxt;
+      return `
+        <g>
+          <rect x="${x}" y="${y}" width="${W}" height="${H}" rx="12" class="dg-box${t.verify ? " dg-verify" : ""}"/>
+          <text x="${x + 12}" y="${y + 26}" class="dg-name">${esc(t.name)}</text>
+          <text x="${x + 12}" y="${y + 48}" class="dg-key">${esc(shortKey)}</text>
+        </g>`;
+    }).join("");
+
+    return `
+      <svg class="diagram" viewBox="0 0 760 360" role="img" aria-label="Schema relații ${mod}">
+        <defs>
+          <marker id="arrow-${mod}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/>
+          </marker>
+        </defs>
+        ${lines}
+        ${boxes}
+      </svg>
+      <p class="muted">Săgeata pornește din tabelul care conține câmpul și indică tabelul pe care îl referă. Liniile punctate sunt de confirmat.</p>`;
+  }
+
+  function renderModule(mod){
+    const m = MODULES[mod];
+    const tablesHtml = m.tables.map((t) => `
+      <div class="tbl">
+        <div class="tbl-head">
+          <span class="tbl-name">${esc(t.name)}</span>
+          ${t.verify ? '<span class="tag-verify">verifică</span>' : ""}
+        </div>
+        <div class="tbl-desc">${esc(t.desc)}</div>
+        <div><span class="muted">Cheie:</span> ${t.key.map((k) => `<span class="chip key">${esc(k)}</span>`).join("")}</div>
+        <div><span class="muted">Câmpuri utile:</span> ${t.fields.map((f) => `<span class="chip field">${esc(f)}</span>`).join("")}</div>
+      </div>`).join("");
+
+    return `${renderDiagram(mod)}${tablesHtml}`;
+  }
+
+  function showModule(mod){
+    document.querySelectorAll(".mod-tab").forEach((b) => b.classList.toggle("active", b.dataset.mod === mod));
+    $("modContent").innerHTML = renderModule(mod);
+  }
+
+  function showTask2(){
+    els.dashboard.classList.add("hidden");
+    $("task2").classList.remove("hidden");
+    showModule("CS");
+    window.scrollTo(0, 0);
+  }
+
+  document.querySelectorAll(".mod-tab").forEach((b) => {
+    b.addEventListener("click", () => showModule(b.dataset.mod));
+  });
+  $("backBtn2").addEventListener("click", showDashboard);
+  $("modContent").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-copy]");
+    if (!btn) return;
+    navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+      btn.textContent = "Copiat ✓";
+      setTimeout(() => { btn.textContent = "Copiază ON"; }, 1500);
+    }).catch(() => {});
+  });
+
   /* ============ EVENIMENTE ============ */
   document.querySelectorAll("[data-open]").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (btn.dataset.open === "task1") showTask1();
+      if (btn.dataset.open === "task2") showTask2();
     });
   });
   els.backBtn.addEventListener("click", showDashboard);
