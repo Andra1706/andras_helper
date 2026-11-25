@@ -192,6 +192,22 @@
   }
   .spec-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
 
+  /* ===== Task 5: ciclu CAB ===== */
+  input[type="date"], input[type="time"], input[type="number"]{
+    display:block;width:100%;margin-top:6px;padding:12px 14px;
+    border:1px solid var(--border);border-radius:12px;font:inherit;font-size:16px;
+    background:#fff;color:var(--ink);
+  }
+  input[type="date"]:focus, input[type="time"]:focus, input[type="number"]:focus{outline:2px solid var(--accent);border-color:transparent}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 14px}
+  .check{display:flex;align-items:center;gap:8px;margin-top:14px;font-weight:600;font-size:.95rem}
+  .check input{width:auto;margin:0}
+  .info-line{
+    background:#fff;border:1px dashed var(--border);border-radius:12px;
+    padding:12px 14px;margin-top:14px;line-height:1.7;font-size:.95rem;
+  }
+  .gc-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
   @media (max-width:600px){
     .wrap{padding:0 12px 30px}
     .grid{grid-template-columns:repeat(2,1fr);gap:12px}
@@ -241,11 +257,11 @@
         <span class="task-tag">Nou</span>
       </button>
 
-      <button class="task-btn" type="button" disabled>
-        <span class="task-icon">🛠️</span>
-        <span class="task-name">Task 5</span>
-        <span class="task-desc">Va fi definit ulterior.</span>
-        <span class="task-tag">În curând</span>
+      <button class="task-btn" type="button" data-open="task5">
+        <span class="task-icon">📅</span>
+        <span class="task-name">Ciclu CAB</span>
+        <span class="task-desc">Adaugă în Google Calendar pre-CAB, CAB și reminderul pentru minută.</span>
+        <span class="task-tag">Nou</span>
       </button>
 
       <button class="task-btn" type="button" disabled>
@@ -373,6 +389,49 @@
     </div>
   </section>
 
+  <!-- ============ TASK 5: CICLU CAB ============ -->
+  <section id="task5" class="hidden">
+    <button class="back-btn" id="backBtn5" type="button">← Înapoi la dashboard</button>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Ciclu CAB în Google Calendar</h2>
+        <span class="badge">La fiecare 8 săptămâni</span>
+      </div>
+      <p class="muted">Pre-CAB-ul este cu 4 zile înainte de CAB, iar reminderul pentru minută este a doua zi după CAB. Fiecare buton deschide Google Calendar cu evenimentul gata completat.</p>
+
+      <div class="form-grid">
+        <label>Data CAB
+          <input id="c_date" type="date">
+        </label>
+        <label>Ora CAB
+          <input id="c_time" type="time" value="10:00">
+        </label>
+        <label>Durata CAB (minute)
+          <input id="c_dur" type="number" min="15" step="15" value="60">
+        </label>
+        <label>Ora pre-CAB
+          <input id="p_time" type="time" value="10:00">
+        </label>
+        <label>Durata pre-CAB (minute)
+          <input id="p_dur" type="number" min="15" step="15" value="45">
+        </label>
+      </div>
+
+      <label class="check">
+        <input id="c_recur" type="checkbox" checked> Repetă la fiecare 8 săptămâni
+      </label>
+
+      <div id="c_info" class="info-line muted">Alege data CAB-ului pentru a vedea datele calculate.</div>
+
+      <div class="gc-row">
+        <button id="g_pre" class="btn ghost" type="button">📅 Adaugă pre-CAB</button>
+        <button id="g_cab" class="btn primary" type="button">📅 Adaugă CAB</button>
+        <button id="g_min" class="btn ghost" type="button">📝 Reminder minută</button>
+      </div>
+    </div>
+  </section>
+
   <footer>Andra's helper · versiunea 1</footer>
 </div>
 
@@ -467,6 +526,7 @@ Reguli:
     $("task2").classList.add("hidden");
     $("task3").classList.add("hidden");
     $("task4").classList.add("hidden");
+    $("task5").classList.add("hidden");
     els.dashboard.classList.remove("hidden");
     window.scrollTo(0, 0);
   }
@@ -1044,6 +1104,155 @@ Reguli:
   $("s_dl").addEventListener("click", downloadSpec);
   $("backBtn4").addEventListener("click", showDashboard);
 
+  /* ============ TASK 5: CICLU CAB → GOOGLE CALENDAR ============ */
+  const CAB_KEY = "andra-cab-settings";
+  const GCAL_URL = "https://calendar.google.com/calendar/render";
+  const CAL_TZ = "Europe/Bucharest";
+
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const ymd = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+  const ymdhm = (d) => `${ymd(d)}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+  const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const addMinutes = (d, m) => new Date(d.getTime() + m * 60000);
+
+  function parseDay(v){
+    if (!v) return null;
+    const [y, m, d] = v.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function atTime(day, hhmm){
+    const [h, m] = (hhmm || "10:00").split(":").map(Number);
+    return new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m);
+  }
+
+  function cabPlan(){
+    const day = parseDay($("c_date").value);
+    if (!day) return null;
+    const cabDur = Number($("c_dur").value) || 60;
+    const preDur = Number($("p_dur").value) || 45;
+    const cabStart = atTime(day, $("c_time").value);
+    return {
+      cabStart,
+      cabEnd: addMinutes(cabStart, cabDur),
+      preStart: atTime(addDays(day, -4), $("p_time").value),
+      preDur,
+      minDay: addDays(day, 1)
+    };
+  }
+
+  // Link către Google Calendar cu evenimentul completat; recurența este opțională
+  function gcalUrl({ text, details, start, end, allDay, recur }){
+    const params = { action: "TEMPLATE", text, details: details || "" };
+    if (allDay){
+      params.dates = `${ymd(start)}/${ymd(end)}`;
+    } else {
+      params.dates = `${ymdhm(start)}/${ymdhm(end)}`;
+      params.ctz = CAL_TZ;
+    }
+    if (recur) params.recur = "RRULE:FREQ=WEEKLY;INTERVAL=8";
+    const query = Object.entries(params)
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+      .join("&");
+    return `${GCAL_URL}?${query}`;
+  }
+
+  function refreshCabInfo(){
+    const p = cabPlan();
+    if (!p){
+      $("c_info").textContent = "Alege data CAB-ului pentru a vedea datele calculate.";
+      return;
+    }
+    const fmtDay = (d) => d.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    const fmtTime = (d) => d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
+    $("c_info").innerHTML = `
+      <strong>Pre-CAB:</strong> ${fmtDay(p.preStart)}, ${fmtTime(p.preStart)}<br>
+      <strong>CAB:</strong> ${fmtDay(p.cabStart)}, ${fmtTime(p.cabStart)}<br>
+      <strong>Reminder minută:</strong> ${fmtDay(p.minDay)} (toată ziua)`;
+  }
+
+  function saveCabSettings(){
+    try{
+      localStorage.setItem(CAB_KEY, JSON.stringify({
+        cTime: $("c_time").value, cDur: $("c_dur").value,
+        pTime: $("p_time").value, pDur: $("p_dur").value,
+        recur: $("c_recur").checked
+      }));
+    }catch{}
+  }
+
+  function loadCabSettings(){
+    try{
+      const s = JSON.parse(localStorage.getItem(CAB_KEY) || "null");
+      if (!s) return;
+      $("c_time").value = s.cTime || "10:00";
+      $("c_dur").value = s.cDur || "60";
+      $("p_time").value = s.pTime || "10:00";
+      $("p_dur").value = s.pDur || "45";
+      $("c_recur").checked = s.recur !== false;
+    }catch{}
+  }
+
+  function openGcal(url){ window.open(url, "_blank", "noopener"); }
+
+  function needCabDate(){
+    $("c_info").innerHTML = '<span class="error">Alege mai întâi data CAB-ului.</span>';
+  }
+
+  function addPre(){
+    const p = cabPlan();
+    if (!p) return needCabDate();
+    openGcal(gcalUrl({
+      text: "Pre-CAB: prioritizare taskuri IT",
+      details: "Sedința de pre-CAB cu managerii IT. Pregătește subiectele pentru CAB.",
+      start: p.preStart,
+      end: addMinutes(p.preStart, p.preDur),
+      recur: $("c_recur").checked
+    }));
+  }
+
+  function addCab(){
+    const p = cabPlan();
+    if (!p) return needCabDate();
+    openGcal(gcalUrl({
+      text: "CAB: prioritizare taskuri IT și BU",
+      details: "Sedința CAB cu managerii IT și BU. După sedință: trimite minuta a doua zi.",
+      start: p.cabStart,
+      end: p.cabEnd,
+      recur: $("c_recur").checked
+    }));
+  }
+
+  function addMinute(){
+    const p = cabPlan();
+    if (!p) return needCabDate();
+    openGcal(gcalUrl({
+      text: "Trimite minuta CAB",
+      details: "Trimite minuta sedinței CAB către managerii IT și BU (din Outlook).",
+      start: p.minDay,
+      end: addDays(p.minDay, 1),
+      allDay: true,
+      recur: $("c_recur").checked
+    }));
+  }
+
+  function showTask5(){
+    els.dashboard.classList.add("hidden");
+    $("task5").classList.remove("hidden");
+    window.scrollTo(0, 0);
+    loadCabSettings();
+    refreshCabInfo();
+  }
+
+  ["c_date", "c_time", "c_dur", "p_time", "p_dur"].forEach((id) => {
+    $(id).addEventListener("input", () => { refreshCabInfo(); saveCabSettings(); });
+  });
+  $("c_recur").addEventListener("change", saveCabSettings);
+  $("g_pre").addEventListener("click", addPre);
+  $("g_cab").addEventListener("click", addCab);
+  $("g_min").addEventListener("click", addMinute);
+  $("backBtn5").addEventListener("click", showDashboard);
+
   /* ============ EVENIMENTE ============ */
   document.querySelectorAll("[data-open]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1051,6 +1260,7 @@ Reguli:
       if (btn.dataset.open === "task2") showTask2();
       if (btn.dataset.open === "task3") showTask3();
       if (btn.dataset.open === "task4") showTask4();
+      if (btn.dataset.open === "task5") showTask5();
     });
   });
   els.backBtn.addEventListener("click", showDashboard);
