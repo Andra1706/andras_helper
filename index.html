@@ -169,6 +169,19 @@
   .dg-key{font:11px ui-monospace,Consolas,monospace;fill:var(--muted)}
   .dg-label{font:600 11px ui-monospace,Consolas,monospace;fill:#431407;paint-order:stroke;stroke:#fff;stroke-width:4px}
 
+  /* ===== Task 3: căutare tranzacții ===== */
+  input[type="search"]{
+    display:block;width:100%;margin-top:6px;padding:12px 14px;
+    border:1px solid var(--border);border-radius:12px;font:inherit;font-size:16px;
+    background:#fff;color:var(--ink);
+  }
+  input[type="search"]:focus{outline:2px solid var(--accent);border-color:transparent}
+  .res{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:12px}
+  .res-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .res-tcode{font:800 1.1rem ui-monospace,Consolas,monospace;color:var(--primary)}
+  .res-desc{margin-top:6px;line-height:1.5}
+  .res-match{margin-top:8px;font-size:.8rem}
+
   @media (max-width:600px){
     .wrap{padding:0 12px 30px}
     .grid{grid-template-columns:repeat(2,1fr);gap:12px}
@@ -204,11 +217,11 @@
         <span class="task-tag">Nou</span>
       </button>
 
-      <button class="task-btn" type="button" disabled>
-        <span class="task-icon">📊</span>
-        <span class="task-name">Task 3</span>
-        <span class="task-desc">Va fi definit ulterior.</span>
-        <span class="task-tag">În curând</span>
+      <button class="task-btn" type="button" data-open="task3">
+        <span class="task-icon">🔎</span>
+        <span class="task-name">Ce tranzacție folosesc?</span>
+        <span class="task-desc">Caută tranzacția potrivită după un cuvânt cheie.</span>
+        <span class="task-tag">Nou</span>
       </button>
 
       <button class="task-btn" type="button" disabled>
@@ -287,6 +300,23 @@
       </div>
 
       <div id="modContent"></div>
+    </div>
+  </section>
+
+  <!-- ============ TASK 3: CĂUTARE TRANZACȚII ============ -->
+  <section id="task3" class="hidden">
+    <button class="back-btn" id="backBtn3" type="button">← Înapoi la dashboard</button>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Ce tranzacție folosesc?</h2>
+        <span class="badge">Căutare locală</span>
+      </div>
+      <p class="muted">Scrie un cuvânt cheie sau un tcode, de exemplu „dump”, „transport” sau „SE38”. Căutarea ignoră diacriticele.</p>
+
+      <input id="tQuery" type="search" placeholder="ex: blocare, autorizare, SE11" autocomplete="off">
+      <div id="tStatus" class="muted" style="margin-top:8px"></div>
+      <div id="tResults"></div>
     </div>
   </section>
 
@@ -382,6 +412,7 @@ Reguli:
     stop();
     els.task1.classList.add("hidden");
     $("task2").classList.add("hidden");
+    $("task3").classList.add("hidden");
     els.dashboard.classList.remove("hidden");
     window.scrollTo(0, 0);
   }
@@ -658,11 +689,89 @@ Reguli:
     }).catch(() => {});
   });
 
+  /* ============ TASK 3: CĂUTARE TRANZACȚII ============ */
+  // Catalogul este citit din transactions.json, aflat în același repository cu index.html
+  let TX = null;
+  const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+
+  async function loadTransactions(){
+    if (TX) return TX;
+    const res = await fetch("transactions.json", { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    TX = await res.json();
+    return TX;
+  }
+
+  function scoreTx(tx, terms){
+    const tcode = norm(tx.tcode);
+    const desc = norm(tx.descriere || "");
+    const kws = (tx.cuvinte_cheie || []).map(norm);
+    let score = 0;
+    const matched = new Set();
+    for (const t of terms){
+      if (tcode === t){ score += 100; matched.add(t); continue; }
+      if (kws.some((k) => k.includes(t))){ score += 5; matched.add(t); }
+      if (desc.includes(t)){ score += 2; matched.add(t); }
+    }
+    return { score, matched: [...matched] };
+  }
+
+  function runSearch(){
+    if (!TX) return;
+    const terms = norm($("tQuery").value).split(/\s+/).filter((t) => t.length >= 2);
+    const box = $("tResults");
+
+    if (!terms.length){
+      box.innerHTML = "";
+      $("tStatus").textContent = `${TX.length} tranzacții în catalog. Scrie un cuvânt pentru a căuta.`;
+      return;
+    }
+
+    const list = TX.map((tx) => ({ tx, ...scoreTx(tx, terms) }))
+      .filter((r) => r.score > 0)
+      .sort((a, b) => b.score - a.score || a.tx.tcode.localeCompare(b.tx.tcode))
+      .slice(0, 30);
+
+    if (!list.length){
+      box.innerHTML = "";
+      $("tStatus").textContent = "Nu am găsit nicio tranzacție. Încearcă un sinonim sau o parte din cuvânt.";
+      return;
+    }
+
+    $("tStatus").textContent = `${list.length} rezultate`;
+    box.innerHTML = list.map(({ tx, matched }) => `
+      <div class="res">
+        <div class="res-head">
+          <span class="res-tcode">${esc(tx.tcode)}</span>
+          <span class="chip field">${esc(tx.modul || "")}</span>
+        </div>
+        <div class="res-desc">${esc(tx.descriere || "")}</div>
+        <div class="res-match muted">Potrivire: ${matched.map((m) => `<span class="chip key">${esc(m)}</span>`).join("")}</div>
+      </div>`).join("");
+  }
+
+  async function showTask3(){
+    els.dashboard.classList.add("hidden");
+    $("task3").classList.remove("hidden");
+    window.scrollTo(0, 0);
+    try{
+      await loadTransactions();
+      runSearch();
+      $("tQuery").focus();
+    }catch(err){
+      $("tStatus").innerHTML = `<span class="error">Nu pot citi transactions.json (${esc(err.message)}). Verifică să fie în același repository cu index.html.</span>`;
+    }
+  }
+
+  $("tQuery").addEventListener("input", runSearch);
+  $("backBtn3").addEventListener("click", showDashboard);
+
   /* ============ EVENIMENTE ============ */
   document.querySelectorAll("[data-open]").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (btn.dataset.open === "task1") showTask1();
       if (btn.dataset.open === "task2") showTask2();
+      if (btn.dataset.open === "task3") showTask3();
     });
   });
   els.backBtn.addEventListener("click", showDashboard);
